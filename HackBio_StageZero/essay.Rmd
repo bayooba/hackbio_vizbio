@@ -1,0 +1,59 @@
+---
+title: "Dashboards for biology: Stop treating your plots like PowerPoint."
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<style>
+html { padding: 20px; } 
+body { font-family: "Helvetica Neue",Helvetica,Arial,sans-serif ; font-size: 12pt ; line-height: 1.6 ; max-width: 100%; }
+p { text-align: justify; }
+</style>
+
+
+Biological data is complex, dynamic and multi-dimensional. Yet, how we visualize this 
+it has not evolved at the same pace with which it is generated, such that we often summarize it with static figures. In many biology workflows, plots are treated as final products rather than as tools for exploration and decision making. When biological plots are treated like PowerPoint slides, this limits its exploration and questions that can be generated from such data. Interactive visualizations, however, support flexible, iterative data exploration by allowing dynamica manipulate views, test assumptions and uncovering of patterns that static graphics cannot easily reveal (Heer & Shneiderman, 2012). Thus, a shift from static presentations to interactive dashboards that support real biological insights is critical and necessary.
+
+## The Problem with Static Plots in Biology
+
+In biological research, commonly used static plots such as bar and line graphs often obscure data variability and individual observations, limiting transparency and potentially misleading interpretation (Weissgerber et al., 2016). Bar charts, heatmaps, line graphs and scatter plots are generated, polished and frozen in time. They are optimized for presentation but not for exploration. This approach creates several limitations as static figures answer predefined question and hide much of the underlying complexity. In a field like biology, where results vary across conditions, time points and several samples, this approach can obscure important patterns and uncertainty.
+
+## What Dashboards can Change
+
+Dashboards represent a shift from static figures to interactive analytical environments. Tools such as ***Shiny*** and ***Quarto*** in R allow researchers to build interfaces where data can be explored.  Interactive tools and dashboards, including those built with R-based frameworks, are increasingly used in biological research to improve data exploration, reproducibility and communication beyond what static figures allow (Perkel, 2018).
+With dashboards, researchers can:
+
+-	Filter data by condition, time point or sample group.
+-	Adjust thresholds and immediately see how results change.
+-	Compare multiple views of the same dataset side by side
+
+Instead of asking the question of whether the plot look good, the question immediately becomes, “what happens if the current assumptions are varied or changed entirely?” The value of dashboards is not aesthetic appeal but decision making and revealing putative outcomes. They can help biologists evaluate robustness, compare conditions and identify meaningful variables’ relationships worth further investigation. By encouraging interaction, dashboards make assumptions visible and support more transparent analysis.
+
+## A Simple Example
+
+Consider a gene expression study across multiple conditions. A static heatmap might highlight clusters and trends, but it fixes the scale, the ordering and the included genes.
+An interactive dashboard could allow a researcher to:
+
+1.	Select specific genes of interest.
+2.	Toggle between normalized and raw expression.
+3.	Inspect individual gene profiles over time.
+
+The same dataset becomes more informative, not because it looks better, but because it can be questioned more deeply.
+
+## Conclusion
+
+The future of biological data visualization should, while maintaining static figures with higher resolution or better colour palettes, transition to dashboards that supports interactive visualizations. An interactive alternative that reflect how research happens: iteratively, uncertainly and driven by decision-making. Dashboards do not replace papers or figures. They complement them by supporting exploration before conclusions are finalized. By moving beyond PowerPoint-style plots, biologists can engage more honestly with their data and make better-informed research choices. In biology, insight comes not from prettier plots, but from better questions. Interactive dashboards help us ask them.
+
+### References
+
+Heer, J., & Shneiderman, B. (2012). Interactive dynamics for visual analysis. Communications of the ACM, 55(4), 45–54. https://doi.org/10.1145/2133806.2133821
+
+Weissgerber, T. L., Milic, N. M., Winham, S. J., & Garovic, V. D. (2016). Beyond bar and line graphs: Time for a new data presentation paradigm. PLoS Biology, 14(4), e1002484.
+https://doi.org/10.1371/journal.pbio.1002484
+
+Perkel, J. M. (2018). Data visualization tools drive interactivity and reproducibility in science. Nature, 554(7690), 133–134. https://doi.org/10.1038/d41586-018-01322-9
+
+
+
