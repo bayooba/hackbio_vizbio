@@ -1,0 +1,176 @@
+---
+title: "Protein_Weight_Calculator"
+author: "Adebayo Obafemi"
+date: "2026-01-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Task 1: This is a GC% calculator that estimates the GC content in a sequence of nucleotides
+
+```{r}
+GC_Calculator <- function(input_seq){
+  input_seq <- toupper(input_seq)
+  print(input_seq)
+  
+  input_seq_split <- strsplit(x = input_seq, split = "")[[1]]
+  
+  gc_counter <- 0
+  for (nuc in input_seq_split) {
+    if (nuc == 'G' | nuc == 'C') {
+      gc_counter = gc_counter + 1
+    }
+  }
+  
+  return((gc_counter / length(input_seq_split) * 100))
+}
+
+paste0(GC_Calculator("GCATTTAT"), "%")
+```
+
+### Task 2: This task involves calculating the weight of a protein sequence. It takes my name as a default input and then outputs the weight in **KiloDalton**
+
+```{r}
+#Create the vectors of each column in the dataframe
+
+Amino_Acid <- c("Alanine", "Argine", "Asparagine", "Aspartic Acid", "Cysteine", "Glutamic Acid", "Glutamine", "Glycine", "Histidine", "Isoleucine", "Leucine", "Lysine", "Methionine", "Phenylalanine", "Proline", "Serine", "Threonine", "Tryptophan", "Tryosine", "Valine")
+
+Three_Letter_Code <- c("Ala", "Arg", "Asn", "Asp", "Cys", "Glu", "Gln", "Gly", "His", "Ile", "Leu", "Lys", "Met", "Phe", "Pro", "Ser", "Thr", "Trp", "Tyr", "Val")
+
+One_Letter_Code <- c("A", "R", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V")
+
+Weight <- c(89.09, 174.20, 132.12, 133.10, 121.15, 147.13, 146.15, 75.07, 155.16, 131.18, 131.18, 146.19, 149.21, 165.19, 115.13, 105.09, 119.12, 204.23, 181.19, 117.15)
+
+#Make the dataframe
+protein_weight_table <- data.frame(Amino_Acid, Three_Letter_Code, One_Letter_Code, Weight)
+protein_weight_table
+
+#function to calculate the protein weight
+Protein_Weight_Calculator <- function(input_protein) {
+  input_protein <- toupper(input_protein)
+  input_protein_splitted <- strsplit(x = input_protein, split = "")[[1]]
+  
+  #Initialize the weight of the protein.
+  protein_weight <- 0
+  
+  for (protein in input_protein_splitted) {
+    
+    if (!(protein %in% protein_weight_table$One_Letter_Code)) {
+      return (0)
+    } 
+    
+    else {
+      protein_weight = protein_weight + protein_weight_table['Weight'][protein_weight_table['One_Letter_Code'] == protein]
+      protein_weight <- protein_weight / 1000
+    }
+    
+  }
+  
+  return(round(protein_weight, 3))
+}
+
+paste0(Protein_Weight_Calculator("ade"), " KiloDalton")
+```
+
+### Essay that describes a step-by-step recipe with which I solved the protein weight calculator task in R
+First and foremost, this internship has given me the courage and motivation that I can use the R programming language. 
+In order to write a function that works, it important to understand the processes that will achieve the intended purpose of the function. 
+
+In the current case, a calculator that calculates the weight of any protein in KIloDalton, below is a step-by-step guide on how to write a function that does this.
+
+The first step is to build the reference data-frame which has all the information (data) required, and to which the input_protein of the function can be compared. A simple approach to this in indicated below:
+
+```{r}
+#Create the vectors of each column in the dataframe
+
+Amino_Acid <- c("Alanine", "Argine", "Asparagine", "Aspartic Acid", "Cysteine", "Glutamic Acid", "Glutamine", "Glycine", "Histidine", "Isoleucine", "Leucine", "Lysine", "Methionine", "Phenylalanine", "Proline", "Serine", "Threonine", "Tryptophan", "Tryosine", "Valine")
+
+Three_Letter_Code <- c("Ala", "Arg", "Asn", "Asp", "Cys", "Glu", "Gln", "Gly", "His", "Ile", "Leu", "Lys", "Met", "Phe", "Pro", "Ser", "Thr", "Trp", "Tyr", "Val")
+
+One_Letter_Code <- c("A", "R", "N", "D", "C", "E", "Q", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V")
+
+Weight <- c(89.09, 174.20, 132.12, 133.10, 121.15, 147.13, 146.15, 75.07, 155.16, 131.18, 131.18, 146.19, 149.21, 165.19, 115.13, 105.09, 119.12, 204.23, 181.19, 117.15)
+
+#Make the dataframe
+protein_weight_table <- data.frame(Amino_Acid, Three_Letter_Code, One_Letter_Code, Weight)
+```
+
+After this is done, then the next step will be the actual writing of the function. To do this, the first thing is to give a name to the function that accepts an input. As an example:
+```{r}
+Protein_Weight_Calculator <- function(input_protein){
+  
+}
+```
+
+Thereafter, the input supplied to the function is splitted using the **strsplit** function. In the example below, the input protein is also converted to ***uppercase***:
+```{r}
+Protein_Weight_Calculator <- function(input_protein) {
+  input_protein <- toupper(input_protein)
+  input_protein_splitted <- strsplit(x = input_protein, split = "")[[1]]
+}
+```
+
+This is then followed by initializing the protein weight to zero (0) and a **for** loop where the actual operation of the function is implemented. Within the loop is a conditional that checks if the input_protein has any **non-protein character**. If there is, it returns zero (0) for such input because, obviously, it is not a protein character. Check below:
+```{r}
+Protein_Weight_Calculator <- function(input_protein) {
+  input_protein <- toupper(input_protein)
+  input_protein_splitted <- strsplit(x = input_protein, split = "")[[1]]
+  
+  #Initialize the weight of the protein.
+  protein_weight <- 0
+  
+  for (protein in input_protein_splitted) {
+    
+    if (!(protein %in% protein_weight_table$One_Letter_Code)) {
+      return (0)
+    } 
+    
+    else {
+      protein_weight = protein_weight + protein_weight_table['Weight'][protein_weight_table['One_Letter_Code'] == protein]
+      protein_weight <- protein_weight / 1000
+    }
+  }
+}
+```
+
+The final part of the function is to return the value of the estimated weight of the input protein. This is done with a return statement.
+```{r}
+Protein_Weight_Calculator <- function(input_protein) {
+  input_protein <- toupper(input_protein)
+  input_protein_splitted <- strsplit(x = input_protein, split = "")[[1]]
+  
+  #Initialize the weight of the protein.
+  protein_weight <- 0
+  
+  for (protein in input_protein_splitted) {
+    
+    if (!(protein %in% protein_weight_table$One_Letter_Code)) {
+      return (0)
+    } 
+    
+    else {
+      protein_weight = protein_weight + protein_weight_table['Weight'][protein_weight_table['One_Letter_Code'] == protein]
+      protein_weight <- protein_weight / 1000
+    }
+  }
+  return(round(protein_weight, 3))
+}
+```
+
+After writing the function, click on the **Run** icon to execute all the code. Once the has been done, the fucntion is now available for use. To use the function, simply do as indicated in the example below:
+```{r}
+Protein_Weight_Calculator('oba')
+Protein_Weight_Calculator('ade')
+
+#The part of the code formats the output to include the unit (KiloDalton) after executing the function
+paste0(Protein_Weight_Calculator('oba'), ' KiloDalton')
+paste0(Protein_Weight_Calculator('ade'), ' KiloDalton')
+```
+
+The execution of the function will output two different values because inout has a non-protein character while the other has only protein characters. That ends the step-by-step guide on how to write a function that calculates the weight of any protein.
+
+Thank you for reading and see you next time 😊.
+
