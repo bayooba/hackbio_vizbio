@@ -1,0 +1,120 @@
+---
+title: "Stage Two Task: Part 1"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<style>
+html { padding: 10px; } 
+body { font-family: "Helvetica Neue",Helvetica,Arial,sans-serif ; font-size: 12pt ; line-height: 1.6 ; max-width: 100%; }
+p { text-align: justify; }
+</style>
+
+
+## Gene Expression Analysis
+```{r Load libraries and data files, message=FALSE, warning=FALSE}
+# Load all library
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Data files
+hbrUhrOnline <- 'https://raw.githubusercontent.com/HackBio-Internship/2025_project_collection/refs/heads/main/Python/Dataset/hbr_uhr_top_deg_normalized_counts.csv'
+
+chromosome22Online <- 'https://raw.githubusercontent.com/HackBio-Internship/2025_project_collection/refs/heads/main/Python/Dataset/hbr_uhr_deg_chr22_with_significance.csv'
+
+breast_cancerOnline <- 'https://raw.githubusercontent.com/HackBio-Internship/2025_project_collection/refs/heads/main/Python/Dataset/data-3.csv'
+
+normalizedHbrUhr_data <- read.delim(hbrUhrOnline, header = T, sep = ",")
+chromosome22_data <- read.delim(chromosome22Online, header = T, sep = ",")
+breastCancer_data <- read.delim(breast_cancerOnline, header = T, sep = ",")
+```
+
+### **a. Heatmap**
+
+Goals of the task:
+
+- Use the normalized gene expression dataset to plot a clustered heatmap of the top differentially expressed genes between HBR and UHR samples.
+- Label both genes and samples.
+- Use a color gradients (e.g., Blues) to indicate levels.
+
+```{r Heatmap Plot, message=FALSE, warning=FALSE}
+# First, take a look at the data set to understand the data and know which part to extract. This is important because to plot a heatmap, all entries must be a matrix of numeric data otherwise it returns an error message.
+normalizedHbrUhr_data
+
+# The next step is to make a dataframe with which the heatmap will be plotted
+HbrUhr_heatmap_df <- normalizedHbrUhr_data %>%
+  select(,1:7) %>%
+  pivot_longer(
+    cols=-X,
+    names_to = "Gene",
+    values_to = "Value"
+)
+
+# After this is done, now proceed to plot the heatmap
+ggplot(HbrUhr_heatmap_df, aes(x = Gene, y = X, fill = Value))+
+  geom_tile(color = 'black')+
+  scale_fill_gradient(low = "#E6F2FF", high = "#002652")+ # At some point, while writing this document, not adding the "+" sign after this line of code did not output the graph as it should! At some other point, it could be the comma ',' sign!
+  labs(
+    x = 'Genes',
+    y = 'Samples',
+    title = 'Heatmap of Top Differentially Expressed Genes'
+  )+
+  theme_minimal()+
+  theme(
+    plot.title = element_text(size = 10, face = "bold"),
+    panel.spacing = unit(5, "cm"),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 7, color = "black"),
+    axis.ticks = element_line(color = "black"),
+    legend.title = element_text(face = "bold", color = "#001552")
+  )
+```
+
+### **b. Volcano Plot**
+
+Goals of this task:
+
+- Plot 'log2FoldChange' vs 'log10(Padj)' from the DEG results
+- Colour points by significance:
+  - Upregulated: green
+  - Downregulated: orange
+  - Not significant: grey
+- Add dashed vertical lines at 'log2FoldChange = ±1'.
+
+```{r Volcano Plot, message=FALSE, warning=FALSE}
+# As always, the first thing to do will be to look at the data. This can be done by clicking on the icon next to the name of the dataframe in the "Environment Tab"
+
+ggplot(chromosome22_data, aes(x = log2FoldChange, y = PAdj, color = significance))+
+  geom_point(alpha = 0.5, size = 1)+
+  geom_vline(
+    xintercept = c(-1, 1),
+    linetype = "dashed",
+    linewidth = 0.5
+  )+
+  scale_color_manual(
+    values = c("down" = "orange", "up" = "green", "ns" = "grey"),
+    labels = c("down" = "Down", "up" = "Up", "ns" = "NS"),
+    name = "Significance"
+  )+
+  labs(
+    x = "log2FoldChange",
+    y = "log10(Padj)",
+    title = "Volcano Plot of Differentialy Expressed Genes"
+  )+
+  theme_minimal()+
+  theme(
+    text = element_text(family = "sans"),
+    #panel.grid = element_blank()
+    axis.title = element_text(size = 10, face = "bold"),
+    axis.text = element_text(colour = "black"),
+    legend.title = element_text(size = 10, face = "bold")
+  )
+```

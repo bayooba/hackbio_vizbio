@@ -1,0 +1,199 @@
+---
+title: 'Stage Two Task: Part 2'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<style>
+html { padding: 10px; } 
+body { font-family: "Helvetica Neue",Helvetica,Arial,sans-serif ; font-size: 12pt ; line-height: 1.6 ; max-width: 100%; }
+p { text-align: justify; }
+</style>
+
+## Part 2: Breast Cancer Data Exploration
+```{r Load library and data file(s), message=FALSE, warning=FALSE}
+#install.packages('reshape') to install the 'reshape' package if not yet installed
+library(ggplot2)
+library(dplyr)
+library(reshape)
+
+data_url <- 'https://raw.githubusercontent.com/HackBio-Internship/2025_project_collection/refs/heads/main/Python/Dataset/data-3.csv'
+
+breastCancer_data <- read.delim(data_url, header = T, sep = ",")
+```
+
+### **c. Scatter Plot (radius vs texture)**
+
+Goal:
+
+-  Plot 'texture_mean' vs 'radius_mean' and color points by 'diagnosis' (M = malignant, B = benign).
+```{r Scatter Plot, message=FALSE, warning=FALSE}
+plot(data = breastCancer_data, 
+     texture_mean~radius_mean,
+     xlab = 'Radius Mean',
+     ylab = 'Texture Mean',
+     las = 1,
+     xlim = c(0,30),
+     ylim = c(0,50),
+     col = c("B" = "orange2", "M" = "#3685d3")[as.factor(breastCancer_data$diagnosis)],
+     pch = 19,
+     cex = 0.5
+     )
+
+legend(25,50,
+  legend = c("Benign", "Malignant"),
+  col = c("Benign" = "orange2", "Malignant" = "#3685d3"),
+  title = "Diagnosis",
+  title.font = 2,# make the legend title bold
+  bty = "o", #parameter to draw border: "o" fr draw box (default); "n" for no box
+  pch = 15,
+  cex = 0.8,
+  adj = 0, #Justifies text relative to symbol	0 (left), 1 (right)
+  xjust = -0.2, # Justifies box relative to X-coord	0.5 (centered)
+  x.intersp = 0.8,# Space between symbol and label. Default is 1
+  y.intersp = 1.2, # y.intersp	Vertical	Distance between rows of items.
+  title.adj = 0.3, #Justifies the legend title	0 to 1.0 (left), 1 (right)
+  box.lty = 1,
+  box.lwd = 1,
+  box.col = "darkgray"
+  )
+```
+
+### **d. Correlation Heatmap**
+
+Goal:
+
+- Compute the correlation matrix of six key features:
+    radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean and compactness_mean
+- Plot as a heatmap with correlation annotated.
+
+```{r Heatmap of correlation matrix for six key features , message=FALSE, warning=FALSE}
+# Create a dataframe of correlations
+cor_matrix <- cor(breastCancer_data[3:8])
+#print(cor_matrix) or alternatively click on the file to view it in the source panel. 
+
+melted_cor <- melt(cor_matrix, varnames = c("var1","var2" ))
+
+ggplot(melted_cor, aes(x = var1, y = var2, fill = value))+
+  geom_tile(color = 'black')+
+  geom_text(aes(label = sprintf("%.1f", value)), size = 4)+
+  scale_y_discrete(limits = rev(rownames(cor_matrix)))+
+  scale_fill_gradient(low = "#e7f5ff", high = "royalblue")+
+  labs(
+    x = '',
+    y = '',
+    fill = "Correlation",
+    title = "Correlation Matrix of Six Key Features"
+  )+
+  theme_minimal()+
+  theme(
+     axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1),
+     axis.text = element_text(color = "black", size = 10),
+     legend.title = element_text(face = "bold"),
+    legend.key.height = unit(1, "null"))+
+coord_fixed()
+```
+
+### **e. Scatter Plot (compactness vs smoothness)**
+
+Goal:
+
+-  Plot 'compactness_mean' vs 'smoothness_mean' and color points by 'diagnosis' (M = malignant, B = benign).
+- Include gridlines and clear axis labels.
+```{r Scatter Plot: compactness vs smoothness, message=FALSE, warning=FALSE}
+ggplot(breastCancer_data, aes(x = smoothness_mean, y = compactness_mean, color = as.factor(diagnosis)))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(
+    labels = c("B" = "Benign","M" = "Malignant"), values = c("B" = "orange2", "M" = "#3685d3")
+  )+
+  coord_cartesian(xlim = c(0.05,0.2), ylim = c(0,0.35))+
+  labs(
+    x = "smoothness_mean",
+    y = "compactness_mean",
+    color = "Diagnosis",
+    title = "Scatter Plot for compactness and smoothness means"
+  )+
+  theme_minimal()+
+  theme(
+    legend.background = element_rect(color = "darkgrey"),
+    legend.justification = c(0,0.9),
+    legend.title = element_text(
+      hjust = 0.5,
+      face = "bold"
+    ),
+    plot.title = element_text(margin = margin(t = 12, b = 12)))
+```
+
+
+
+### **f. Density Plot (area distribution)**
+
+Goal:
+
+-  Plot kernel density estimates (KDE) of 'area mean' for both M and B diagnosis on the same axis
+- Add legend and labeled axis
+
+```{r Density plot: kernel density estimates of area mean for both diagnosis, message=FALSE, warning=FALSE}
+ggplot(breastCancer_data, aes(x = area_mean, fill = factor(diagnosis), color = factor(diagnosis)))+
+  geom_density(alpha = 0.5)+
+  scale_fill_manual(
+    labels = c("B" = "Benign", "M" = "Malignant"), values = c("B" = "orange2", "M" = "#3685d3")
+  )+
+  scale_color_manual(
+    labels = c("B" = "Benign", "M" = "Malignant"), values = c("B" = "orange2", "M" = "#3685d3")
+  )+
+  labs(
+    y = "Density",
+    fill = "Diagnosis",
+    color = "Diagnosis",
+    title = "Kernel Density Estimates of Area Mean"
+    )+
+  theme_minimal()+
+  theme(
+    panel.grid = element_blank(), 
+    legend.title = element_text(face = "bold", hjust = -0.2, margin = margin(b = 6)),
+    legend.background = element_rect(color = "darkgrey"),
+    legend.margin = margin(5,8,8,12),
+    legend.position = c(0.8, 0.9),
+    legend.key = element_rect(color = NA),
+    legend.key.width = unit(1, "cm"),
+    legend.key.height = unit(0.3, "cm"),
+    legend.key.spacing.y = unit(0.1, "cm")
+  )
+```
+
+```{r}
+bubble_plot_df <- read_excel("hb_stage_2.xlsx", sheet = "e")
+
+ggplot(bubble_plot_df, aes(x = half_life, y = alpha))+
+  geom_point(aes(color = stage, size = count), alpha = 0.8)+
+  coord_cartesian(
+    xlim = c(0,50), ylim = c(0,2)
+    )+
+  labs(
+    x = "Half Life",
+    y = "Alpha Life",
+    col = "",
+    size = "",
+    title = "Bobble Plot of Kinetic Regimes: Alpha Life VS Half Life"
+  )+
+  theme_minimal()+
+  theme(
+    plot.margin = margin(2,20,2,20),
+    plot.title = element_text(hjust = 0.5, margin = margin(t = 12, b = 12)),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    legend.position = c(1,1),
+    legend.justification = c(1,1)
+  )
+```
+
