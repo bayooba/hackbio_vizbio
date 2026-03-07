@@ -1,0 +1,614 @@
+---
+title: 'Stage Two Task: Part 3'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<style>
+html { padding: 10px; } 
+body { font-family: "Helvetica Neue",Helvetica,Arial,sans-serif ; font-size: 12pt ; line-height: 1.6 ; max-width: 100%; }
+p { text-align: justify; }
+</style>
+
+### Task 0. Orientation and data hygiene (mandatory, graded)
+- Download the source paper and identify Figure 2 panels (a–g).
+- Inspect the Excel file and map each sheet to a figure panel.
+
+  Panel a: **sheet a** <br> 
+  Panel b: **sheet b** <br>
+  Panel c: **sheet c** <br>
+  Panel d: **sheet d_1** <br>
+  Panel e: **sheet e** <br>
+  Panel f: **sheet f** <br>
+  Panel g: **sheet g** 
+  
+  **NOTE:** the **&lt;br&gt;** tag is an HTML tag, it is for styling and does not special function in R!
+
+- Install the following packages:
+  - readxl
+  - ggplot2
+  - pheatmap
+  - igraph
+
+```{r Package installation and color function, message=FALSE, warning=FALSE}
+#install.packages("readxl")
+#install.packages("igraph")
+
+#load libraries
+library("readxl")
+library("ggplot2")
+library("pheatmap")
+library("igraph")
+library("dplyr")
+library("stringr")
+
+#use this function to create transparent colors
+transparent_color <- function(color, percent = 50, name = NULL) {
+  #      color = color name
+  #    percent = % transparency
+  #       name = an optional name for the color
+  
+  ## Get RGB values for named color
+  rgb.val <- col2rgb(color)
+  
+  ## Make new color using input color as base and alpha set by transparency
+  t.col <- rgb(rgb.val[1], rgb.val[2], rgb.val[3],
+               max = 255,
+               alpha = (100 - percent) * 255 / 100,
+               names = name)
+  
+  ## Save the color
+  invisible(t.col)
+}
+
+hb_pal <- c("#4e79a7", 
+            "#8cd17d", 
+            "#e15759", 
+            "#fabfd2", 
+            "#a0cbe8", 
+            "#59a14f", 
+            "#b07aa1", 
+            "#ff9d9a", 
+            "#f28e2b", 
+            "#f1ce63",
+            "#79706e",
+            "#d4a6c8",
+            "#e9e9e9",
+            "#ffbe7d",
+            "#bab0ac",
+            "#9d7660",
+            "#d37295",
+            "#86bcb6",
+            "#362a39",
+            "#cd9942")
+
+#test the color pallete
+plot(1:length(hb_pal), 1:length(hb_pal), col = hb_pal, pch = 19)
+```
+
+### Task 1. Reproduce panel 2a: Cell-type ratio distributions
+**Goal: Compare distributions across immune cell types.**
+
+Requirements:
+
+    1. Read sheet a
+    2. Produce a boxplot of new_ratio grouped by cell_type
+    3. Match:
+        Orientation (rotated labels)
+        Relative scaling
+        Outlier visibility
+        
+```{r Boxplot for comparison of distributions across immune cell types , message=FALSE, warning=FALSE}
+boxplot_df <- read_xlsx('hb_stage_2.xlsx', sheet = 'a')
+
+plot1 <- ggplot(boxplot_df, aes(x = cell_type, y = new_ratio, fill = cell_type)) +
+  geom_boxplot(
+    #outlier parameters for outlier visibility
+    notch = F,
+    outlier.shape = 1, #hollow circle
+    outlier.size = 0.8, #size of outliers
+    outlier.stroke = 1, #thickness of hollow
+    #outlier.alpha = 1, #transparency
+    outlier.colour = "black", #color (or map to category)
+    # linetype = "solid",
+    whisker.linetype = "dashed", # makes whiskers dashed
+    staplewidth = 0.3 # adds caps to whiskers
+    )+
+  scale_y_continuous(
+       breaks = seq(0,0.5, by = 0.1),
+       limits = c(0,0.5),
+       expand = c(0,0)
+  )+
+  # this layer for relative scaling
+  scale_fill_manual(values = hb_pal)+
+  labs(
+    x = "",
+    y = "Ratio",
+    title = "Cell-type Ratio Distributions"
+  )+
+  theme_minimal()+
+  theme(
+    plot.margin = margin(2,20,2,20),
+    plot.title = element_text(hjust = 0.5, size = 18, margin = margin(b = 12, t = 12)),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text = element_text(color = "black", size = 12),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), # this line of code for rotated labels
+    axis.ticks = element_line(color = "black"),
+    legend.position = "none"
+  )
+print(plot1)
+```
+
+
+
+### Task 2. Reproduce panel 2b: Half-life vs alpha-life scatter
+**Goal: Identify kinetic regimes.**
+
+Requirements:
+
+    Read sheet b
+    Plot log2(half_life) vs log2(alpha)
+    Add:
+        Vertical and horizontal cutoffs
+        Color-coded subsets based on thresholds
+        Labeled exemplar genes (Camp, Ccr2)
+
+Conceptual checks:
+
+    Why log2?
+    What do the four quadrants mean?
+    
+    Response: log2 because it makes data symmetric and easier to interpret.
+    
+    Response: The four quadrants essentially group the expressions into 4 groups : expression strength across the x-axis and fold change (alpah life) along the y-axis.
+    
+
+```{r Kineetic regimes indicated with a plot of log2(half-life) VS log2(alpha), message=FALSE, warning=FALSE}
+kinetics_df <- read_excel("hb_stage_2.xlsx", col_names = TRUE, sheet = "b")
+### NOTE: The order of the code is important. At some point, I put this code after the code used to create the cutoff and it was not producing the correct output. Therefore, be careful when next I have to make a plot!
+#Create the log2 data for both alpha and half_life
+kinetics_df$log2_alpha <- log2(kinetics_df$alpha)
+kinetics_df$log2_half_life <- log2(kinetics_df$half_life)
+
+# Create vertical and horizontal cutoffs
+# The code below uses base R function quantile() to group the data. The cutoff is set to a threshold of 80% for both axes
+cutoff_x <- quantile(kinetics_df$log2_half_life, 0.95)
+cutoff_y <- quantile(kinetics_df$log2_alpha, 0.9)
+
+# Add the grouping for each observation in the kinetics dataframe based on the cutoff for subsequent color in the plot
+kinetics_df <- kinetics_df %>%
+  mutate(color_group = 
+    case_when(
+      log2_half_life <= cutoff_x & log2_alpha >= cutoff_y ~ "TopLeft",
+      log2_half_life >= cutoff_y & log2_alpha >= cutoff_y ~ "TopRight",
+      log2_half_life >= cutoff_x & log2_alpha <= cutoff_y ~ "Right",
+      TRUE ~ "Other"
+    )
+  )
+
+plot2 <- ggplot(kinetics_df, aes(x = log2_half_life, y = log2_alpha))+
+  geom_point(aes(color = color_group), size = 1, alpha = 0.7)+
+  
+  # Quadrant lines
+  geom_vline(xintercept = cutoff_x, linetype = "dashed")+
+  geom_hline(yintercept = cutoff_y, linetype = "dashed")+
+  geom_text(
+    data = subset(kinetics_df, cell %in% c("Camp", "Ccr2")), 
+    aes(label = cell),
+    vjust = 1.5,
+    hjust = 0.5,
+    size = 5,
+    color = "black",
+    fontface = "bold"
+  )+
+  scale_color_manual(
+    values = c(
+      "TopLeft" = "#59a14f",
+      "TopRight" = "#e15759",
+      "Right" = "#4e79a7",
+      "Other" = "#79706e"
+    )
+  )+
+  labs(
+    x = "log2(Half Life)",
+    y = "log2(Alpha Life)",
+    title = "Kinetic Regimes of log2(Half Life) VS log2(Alpha Life)"
+  )+
+  scale_y_continuous(
+       breaks = seq(-10,0, by = 2),
+       limits = c(-10.5,0.5),
+       expand = c(0,0)
+     )+
+  scale_x_continuous(
+       breaks = seq(-1,5, by = 1),
+       limits = c(-1.5,5.5),
+       expand = c(0,0)
+     )+
+  theme_minimal()+
+  theme(
+    plot.margin = margin(2,20,2,20),
+    plot.title = element_text(hjust = 0.5, margin = margin(t = 12, b = 12)),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text = element_text(color = "black", size = 12),
+    axis.ticks = element_line(color = "black"),
+    axis.text.y = element_text(angle = 90, hjust = 0.8),
+    axis.title = element_text(size = 12),
+    legend.position = "none"
+  )
+print(plot2)
+```
+
+
+
+### Task 3. Reproduce panel 2c: Heatmap across cell types and time
+**Goal: Visualize temporal structure across immune compartments.**
+
+Requirements:
+
+    Read sheet c
+    Convert to matrix correctly
+    Build column annotations for:
+        CellType
+        Time
+    Cluster rows only, not columns
+
+Key thinking check:
+
+    Why cluster genes but not time?
+    
+    Response: genes are clustered because the intent is to check the expression of genes in the various cells over time. If time is clustered, it will combine the expression of th genes which will mask the expression of each gene which is the original intent of the task.
+
+```{r Heatmap across cell types and time, message=FALSE, warning=FALSE}
+heatmap_df <- read_excel("hb_stage_2.xlsx", sheet = "c")
+
+#Create column annotation
+col_annotation_b <- data.frame(
+  CellType = str_extract(colnames(heatmap_df[-1]), "^[A-Za-z]+(?=n\\d)"),
+  Time = str_extract(colnames(heatmap_df[-1]), "\\d+h$"))
+
+rownames(col_annotation_b) <- colnames(heatmap_df[-1])
+
+# Define colors for CellType
+celltype_colors <- c(
+  "Macrophage" = "#E41A1C",
+  "Monocyte" = "#377EB8", 
+  "Neutrophil" = "#4DAF4A",
+  "NK" = "#984EA3",
+  "pDC" = "#FF7F00",
+  "B" = "#FFFF33",
+  "T" = "#A65628"
+)
+
+# Define colors for Time (gradient from light to dark)
+timepoints <- c(
+  "00h" = "#ffbe7d",
+  "02h" = "#bab0ac",
+  "06h" = "#9d7660",
+  "12h" = "#d37295",
+  "24h" = "#86bcb6",
+  "48h" = "#362a39",
+  "72h" = "#cd9942"
+)
+
+#Combine into annotation colors list
+annotation_colors <- list(
+  CellType = celltype_colors,
+  Time = timepoints
+  )
+
+col_annotation_b <- col_annotation_b[, c("Time", "CellType")]
+
+heatmap_matrix <- as.matrix(heatmap_df[-1])
+
+
+plot3 <- pheatmap(
+  heatmap_matrix,
+  # silent = TRUE, # If activated will not make any plot in the plot panel!!! but essential for image processing later on 
+  annotation_col = col_annotation_b,
+  annotation_colors = annotation_colors,
+  cluster_rows = T,
+  cluster_cols = F,
+  color = colorRampPalette(c("white", "darkblue"))(100),
+  labels_col = "",
+  show_rownames = F,
+  #scale = "rows" #this will scale the legend between the positive and negative bounds e.g 6 to -6,
+  main = "Heatmap Across Cell Types and Time"
+  )
+print(plot3)
+```
+
+
+### Task 4. Reproduce panel 2d: Pathway enrichment heatmap
+**Goal: Compare pathway-level responses across timepoints.**
+
+Requirements:
+
+    Read sheet d_1
+    Use pathway names as rownames
+    No clustering
+    Diverging color scale centered at zero
+
+Conceptual check:
+
+    Why no clustering here?
+    Why a diverging palette?
+    
+    Response: there is not clustering here because the idea is to check the expression of each pathway at the different timepoint. If clustering is done, it masks the possibility of seeing the biochemistry action response involved in each pathway.
+    Resposne: a divergent pallete is helps to distinctly and quickly identify the pathways that are highly upregulated and those that are otherwise.  
+
+```{r Pathway Enrichment Heatmap, message=FALSE, warning=FALSE}
+#Read the sheet to use for the task
+Pathway_df <- read_excel("hb_stage_2.xlsx", sheet = "d_1")
+
+#Create matrix for the heatmap
+pathway_matrix <- as.matrix(Pathway_df[,-1])
+
+#Assign rownames to the dataframe
+rownames(pathway_matrix) <- Pathway_df$pathway
+
+plot4 <- pheatmap(
+  pathway_matrix,
+  silent = TRUE,
+  cluster_rows = F,
+  cluster_cols = F,
+  color = colorRampPalette(c("red", "white", "blue"))(100),
+  main = "Pathway Enrichment Heatmap"
+  )
+print(plot4)
+```
+
+
+### Task 5. Reproduce panel 2e: Bubble plot of kinetic regimes
+**Goal: Show count-weighted kinetic behavior.**
+
+Requirements:
+
+    Read sheet e
+    Scatter plot:
+        x = half_life
+        y = alpha
+        color = stage
+        size = count
+    Two legends:
+        stage (color)
+        count (size)
+
+```{r Bobble Plot of Kinetic Regimes, message=FALSE, warning=FALSE}
+#Read the sheet required for the task
+bubble_plot_df <- read_excel("hb_stage_2.xlsx", sheet = "e")
+
+plot5 <- ggplot(bubble_plot_df, aes(x = half_life, y = alpha))+
+  geom_point(aes(color = stage, size = count), alpha = 0.8)+
+  coord_cartesian(
+    xlim = c(0,50), ylim = c(0,2)
+    )+
+  labs(
+    x = "Half Life",
+    y = "Alpha Life",
+    col = "",
+    size = "",
+    title = "Bobble Plot of Kinetic Regimes: Alpha Life VS Half Life"
+  )+
+  theme_minimal()+
+  theme(
+    plot.margin = margin(2,20,2,20),
+    plot.title = element_text(hjust = 0.5, margin = margin(t = 12, b = 12)),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black"),
+    axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    legend.position = c(1,1),
+    legend.justification = c(1,1)
+  )
+print(plot5)
+```
+
+
+### Task 6. Reproduce panel 2f: Stacked proportions
+**Goal: Compare B vs Plasma cell proportions over time.**
+
+Requirements:
+
+    Read sheet f
+    Subset to s00h and s72h
+    Stacked barplot of proportions
+    Fixed y-axis (0–0.3)
+
+Conceptual check:
+
+    Why stacked instead of side-by-side?
+    
+    Response: This is useful to e the relative proportion of each variable in the specific timepoint compared to side by side which might show a difference in magnitude of the variables being considered.
+
+```{r Stacked Barplot, message=FALSE, warning=FALSE}
+stacked_bar_df <- read_excel("hb_stage_2.xlsx", sheet = "f")
+
+stacked_bar_df$cell_type <- factor(
+  stacked_bar_df$cell_type,
+  levels = c("Plasma", "B")
+)
+
+stacked_bar_df <- stacked_bar_df %>%
+  filter(stage %in% c("s00h", "s72h"))
+
+plot6 <- ggplot(stacked_bar_df,
+    aes(x = stage, y = proportion, fill = cell_type)
+  )+
+  geom_bar(stat = "identity", position = "stack", color = "black")+
+  scale_fill_manual(values = c("B" = "#d8a0b3", "Plasma" = "#4f6a9a"))+
+  scale_y_continuous(
+       breaks = seq(0,0.3, by = 0.05),
+       limits = c(0,0.3),
+       expand = c(0,0)
+     )+
+  labs(
+    y = "",
+    x = "",
+    fill = "",
+    title = "Stacked Barplot Proportions of Plasma and B cells"
+  )+
+  theme_minimal()+
+  theme(
+    plot.margin = margin(2,20,2,20),
+    plot.title = element_text(hjust = 0.5, margin = margin(t = 12)),
+    panel.grid = element_blank(),
+    axis.text = element_text(color = "black"),
+    axis.line.y = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+  )
+print(plot6)
+```
+
+
+
+### Task 7. Reproduce panel 2g: Directed cell–cell interaction network
+**Goal: Visualize directional communication changes.**
+
+Requirements:
+
+    Read sheet g
+    Convert to adjacency matrix
+    Build directed graph
+    Remove zero-weight edges
+    Edge arrow size proportional to weight
+    Force-directed layout
+
+Conceptual check:
+
+    Why directed?
+    What does edge weight encode biologically?
+    
+    Response: Directed because this shows the connection and particularly the direction of relationships in the network
+    
+    Response: Broadly, edge weight encodes the magnitude of interaction between two variables, in our case between the cells. It encodes how strongly or otherwise that two variables estbalish a relationship.
+
+```{r Directed cell–cell Interaction Network, message=FALSE, warning=FALSE}
+#Import the sheet required for the task
+cell_interaction_df <- read_excel("hb_stage_2.xlsx", sheet = "g")
+
+#Based on the principle of this plot, the matrix must be square i.e nrow() must be same as ncol(). Thus, process the dataframe to meet this requirement then convert the dataframe to matrix
+#Convert the tibble to a dataframe
+cell_interaction_df <- as.data.frame(cell_interaction_df)
+
+#Assign rownames to the dataframe
+rownames(cell_interaction_df) <- cell_interaction_df$...1
+
+#Remove the first column to make it a square data
+cell_interaction_df <- cell_interaction_df[-1]
+
+#Now convert to a matrix which is the required data type that the igraph library uses to make the plot
+cell_interaction_matrix <- as.matrix(cell_interaction_df)
+
+#Build directed graph and remove zero-weight edges
+cell_interaction_graph <- graph_from_adjacency_matrix(
+  cell_interaction_matrix,
+  mode = "directed", #this parameter ensures direction in the matrix
+  weighted = TRUE #this parameter remove zero-weighted edges
+)
+
+#Check that weight have been imported
+E(cell_interaction_graph)$weight
+
+#Apply force-directed layout using weights
+set.seed(123) #Necessary to have reproducible plot otherwise, while the data remains intact, the plot chnages its presentation with every excution of the code.
+forced_layout <- layout_with_fr(cell_interaction_graph, weights = E(cell_interaction_graph)$weight)
+
+#Now make the plot with arrow size proportional to weight
+png("igraph_plot.png", width = 2000, height = 2000, res = 300)
+plot(cell_interaction_graph,
+     layout = forced_layout,
+     edge.width = E(cell_interaction_graph)$weight,
+     edge.arrow.size = 0.5,
+     edge.arrow.width = E(cell_interaction_graph)$weight,
+     vertex.size = 20,
+     vertex.color = "#d8a0b3",
+     vertex.label.color = "black",
+     vertex.label.cex = 1.5,
+     main = "Directed cell–cell Interaction Network"
+     )
+dev.off()
+
+library(png)
+library(grid)
+igraph_png <- readPNG("igraph_plot.png")   # load PNG
+grid.newpage()
+grid.raster(igraph_png)                    # create empty plot
+```
+
+
+### Task 8. Final assembly (mandatory)
+
+    Arrange all panels into a single figure
+    Ensure:
+        Consistent color usage
+        Readable labels
+        No clipping
+    Export as publication-quality PDF or PNG that can be shared on LinkedIn
+    
+```{r Final assembly, message=FALSE, warning=FALSE}
+# Arrange all panel into a single figure
+library(png)
+library(grid)
+library(gridExtra)
+# save each image individually
+png("heatmap_plot3.png", width=2000, height=2000, res=300)
+grid::grid.draw(plot3$gtable)
+dev.off()
+
+png("heatmap_plot4.png", width=2000, height=2000, res=300)
+grid::grid.draw(plot4$gtable)
+dev.off()
+
+ggsave("ggplot_plot1.png", plot=plot1, width=6, height=6, dpi=300)
+
+ggsave("ggplot_plot2.png", plot=plot2, width=6, height=6, dpi=300)
+
+ggsave("ggplot_plot5.png", plot=plot5, width=6, height=6, dpi=300)
+
+ggsave("ggplot_plot6.png", plot=plot6, width=6, height=6, dpi=300)
+
+# Import the saved images
+igraph_img <- rasterGrob(readPNG("igraph_plot.png"))
+
+gg_img1 <- rasterGrob(readPNG("ggplot_plot1.png"))
+gg_img2 <- rasterGrob(readPNG("ggplot_plot2.png"))
+gg_img5 <- rasterGrob(readPNG("ggplot_plot5.png"))
+gg_img6 <- rasterGrob(readPNG("ggplot_plot6.png"))
+heatmap_img3 <- rasterGrob(readPNG("heatmap_plot3.png"))
+heatmap_img4 <- rasterGrob(readPNG("heatmap_plot4.png"))
+
+# Combine the images
+png("combine_figure.png", width = 4000, height = 3000, res = 300)
+combined_grob <- arrangeGrob(
+  gg_img1,
+  gg_img2,
+  heatmap_img4,
+  gg_img5,
+  heatmap_img3,
+  gg_img6,
+  igraph_img,
+  ncol = 4,
+  heights = c(1,1)
+)
+
+#Display combined image to screen
+grid.newpage()
+grid.draw(combined_grob) #necessary for drawing and writing the image to file
+dev.off()
+
+#Display combined image to screen
+combined_img <- readPNG("combine_figure.png")
+grid.newpage()
+grid.raster(combined_img)
+```
+
+Thank you for taking time to follow up to this point. Let's meet in the next lesson: ***Shinny Web Applications in R***
