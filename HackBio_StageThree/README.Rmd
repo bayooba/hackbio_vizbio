@@ -1,0 +1,32 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### How to run the app
+
+To run the app, click the **Run App** button on the top right corner of the script.
+
+### Definition of the gene specificity score used (diff = mean_in - mean_out)
+
+The specificity score diff measures how much more a gene is expressed inside a target cell type compared to outside that cell type.
+
+    mean_in : The average expression level of the gene within the target cell type (e.g., "Type A" cells).
+
+    mean_out : The average expression level of the gene in all other cells (every cell not in the target type).
+
+Interpretation
+
+    High positive diff → The gene is specific to the target cell type (high inside, low outside).
+
+    Zero or negative diff → The gene is not specific (either equally expressed or higher outside).
+
+***diff*** quantifies specificity (contrast), and the selection rule picks the most specific gene, favoring higher within-type prevalence when specificity is tied.
+
+### Explanation of how the marker gene is selected
+
+The marker gene is selected deterministically using a two-step rule based on per-gene statistics. First, a specificity score diff = mean_in - mean_out is calculated for each gene, measuring expression contrast between target and non-target cells. The gene with the maximum diff value is chosen as the marker, as it shows the strongest specificity. If multiple genes share the same maximum diff, the tie is broken by selecting the gene with the larger det_in (detection rate within the target type), ensuring reliable expression. This process, implemented by sorting genes by descending diff then descending det_in and taking the top gene, guarantees a reproducible single marker for UMAP coloring.
+
